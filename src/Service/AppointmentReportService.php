@@ -130,9 +130,11 @@ class AppointmentReportService
      */
     private function addServicesTable(Appointement $appointment): void
     {
+        // Titre de la section
         $this->styleManager->setSectionTitleStyle();
         $this->pdf->Cell(0, 8, 'PRESTATIONS', 0, 1, 'C');
 
+        // Calcul des largeurs
         $tableWidth = $this->pdf->getPageWidth() - (2 * PdfStyleConfig::MARGIN);
         $serviceWidth = $tableWidth * 0.7;
         $priceWidth = $tableWidth * 0.3;
@@ -140,22 +142,29 @@ class AppointmentReportService
         // En-tête du tableau
         $this->pdf->SetFillColor(...PdfStyleConfig::PRIMARY_COLOR);
         $this->styleManager->setStyle('B', 10, [255, 255, 255]);
-        $this->pdf->Cell($serviceWidth, 8, 'Prestation', 1, 0, 'C', true);
+        $this->pdf->Cell($serviceWidth, 8, 'Prestation', 1, 0, 'L', true);
         $this->pdf->Cell($priceWidth, 8, 'Prix', 1, 1, 'C', true);
 
-        // Contenu du tableau
+        // Réinitialisation de la couleur du texte pour le contenu
+        $this->pdf->SetTextColor(0, 0, 0);
         $this->styleManager->setSectionContentStyle();
         $total = 0;
-        foreach ($appointment->getService() as $service) {
-            $this->pdf->Cell($serviceWidth, 8, $service->getName(), 1, 0, 'L');
-            $this->pdf->Cell($priceWidth, 8, $this->formatPrice($service->getPrice()), 1, 1, 'R');
-            $total += $service->getPrice();
+
+        $services = $appointment->getService();
+        if (empty($services)) {
+           throw new \RuntimeException('Aucune prestation trouvée pour le rendez-vous');
+        } else {
+            foreach ($services as $service) {
+                $this->pdf->Cell($serviceWidth, 8, $service->getName(), 1, 0, 'L');
+                $this->pdf->Cell($priceWidth, 8, $this->formatPrice($service->getPrice()), 1, 1, 'R');
+                $total += $service->getPrice();
+            }
         }
 
-        // Total
+        // Ligne du total
         $this->pdf->SetFillColor(240, 240, 240);
         $this->styleManager->setStyle('B', 10);
-        $this->pdf->Cell($serviceWidth, 8, 'Total', 1, 0, 'R', true);
+        $this->pdf->Cell($serviceWidth, 8, 'Total', 1, 0, 'L', true);
         $this->pdf->Cell($priceWidth, 8, $this->formatPrice($total), 1, 1, 'R', true);
     }
 
