@@ -89,13 +89,22 @@ class AppointmentReportService
     }   
 
     /**
-     * Ajoute l'en-tête du document avec le titre
+     * Ajoute l'en-tête du document avec le titre et le logo
      */
     private function addHeader(): void
     {
         $this->pdf->SetFillColor(...PdfStyleConfig::PRIMARY_COLOR);
         $this->pdf->Rect(0, 0, $this->pdf->getPageWidth(), PdfStyleConfig::HEADER_HEIGHT, 'F');
 
+        // Logo à droite
+        $logoPath = __DIR__ . '/../../public/images/logo.png';
+        if (file_exists($logoPath)) {
+            // Calcul de la hauteur pour maintenir le ratio 1:1
+            $logoHeight = PdfStyleConfig::HEADER_HEIGHT - 4; // 2mm de marge en haut et en bas
+            $this->pdf->Image($logoPath, $this->pdf->getPageWidth() - PdfStyleConfig::MARGIN - $logoHeight, 2, $logoHeight);
+        }
+
+        // Titre à gauche
         $this->styleManager->setHeaderStyle();
         $this->pdf->SetXY(PdfStyleConfig::MARGIN, 8);
         $this->pdf->Cell(0, 15, 'COMPTE-RENDU DE RENDEZ-VOUS', 0, 1, 'L');

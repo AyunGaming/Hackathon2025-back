@@ -7,8 +7,10 @@ namespace App\Service;
  */
 class PdfStyleConfig
 {
-    public const PRIMARY_COLOR = [0, 51, 102];    // Bleu foncé
-    public const SECONDARY_COLOR = [128, 128, 128]; // Gris
+    // Couleurs principales
+    public const PRIMARY_COLOR = [25, 97, 159];    // Bleu moyen-foncé pour les titres et accents
+    public const SECONDARY_COLOR = [128, 128, 128]; // Gris pour le footer
+    public const TEXT_COLOR = [0, 0, 0];           // Noir pour le texte normal
     public const HEADER_HEIGHT = 30;              // Hauteur de l'en-tête en mm
     public const MARGIN = 15;                     // Marge de la page en mm
     public const INNER_PADDING = 5;               // Padding intérieur en mm

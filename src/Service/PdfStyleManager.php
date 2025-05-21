@@ -49,7 +49,7 @@ class PdfStyleManager
      */
     public function setSectionContentStyle(): void
     {
-        $this->setStyle('', PdfStyleConfig::DEFAULT_FONT_SIZE);
+        $this->setStyle('', PdfStyleConfig::DEFAULT_FONT_SIZE, PdfStyleConfig::TEXT_COLOR);
     }
 
     /**
