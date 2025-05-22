@@ -16,7 +16,6 @@ class ChatbotService
     public function __construct(
         private readonly HttpClientInterface $httpClient,
         private readonly JsonProcessorService $jsonProcessor,
-        private readonly Security $security,
         #[Autowire('@monolog.logger.chatbot')]
         private readonly LoggerInterface $logger,
         string $chatbotUrl

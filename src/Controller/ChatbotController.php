@@ -3,6 +3,7 @@
 namespace App\Controller;
 
 use App\Entity\Appointement;
+use App\Entity\User;
 use App\Service\ChatbotService;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
@@ -10,6 +11,7 @@ use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\Routing\Annotation\Route;
 use Psr\Log\LoggerInterface;
+use Symfony\Component\Security\Core\Authentication\Token\Storage\TokenStorageInterface;
 
 #[Route('/api/chatbot')]
 class ChatbotController extends AbstractController
@@ -22,15 +24,34 @@ class ChatbotController extends AbstractController
     }
 
     #[Route('/initialize', name: 'chatbot_initialize', methods: ['GET'])]
-    public function initialize(Request $request): JsonResponse
+    public function initialize(Request $request, TokenStorageInterface $tokenStorage): JsonResponse
     {
         try {
-            $userInfo = $request->query->all();
-            if (empty($userInfo)) {
+            $token = $tokenStorage->getToken();
+            
+            $user = $token->getUser();
+            $this->logger->info('Token de connexion: ', ['user' => $user->getEmail()]);
+
+            if (!$user instanceof User) {
+                return $this->json(['error' => 'User not authenticated', 'user' => $user], 401);
+            }
+
+            $client = $user->getClient();
+            $fullName = $client->getFullName();
+            $address = $client->getAddress();
+            $phoneNumber = $client->getPhone();
+
+            $responseData = [
+                'full_name' => $fullName,
+                'address' => $address,
+                'phone_number' => $phoneNumber
+            ];
+            
+            if (empty($responseData)) {
                 return $this->json(['error' => 'No parameters provided'], 400);
             }
 
-            $response = $this->chatbotService->initializeChat($userInfo);
+            $response = $this->chatbotService->initializeChat($responseData);
             return $this->json($response);
         } catch (\Exception $e) {
             return $this->json(['error' => $e->getMessage()], 500);
@@ -38,8 +59,15 @@ class ChatbotController extends AbstractController
     }
 
     #[Route('/message', name: 'chatbot_message', methods: ['POST'])]
-    public function sendMessage(Request $request): JsonResponse
+    public function sendMessage(Request $request, TokenStorageInterface $tokenStorage): JsonResponse
     {
+        $token = $tokenStorage->getToken();
+
+        $user = $token->getUser();
+        if (!$user instanceof User) {
+            return $this->json(['error' => 'User not authenticated', 'user' => $user], 401);
+        }
+
         try {
             $data = json_decode($request->getContent(), true);
             if (json_last_error() !== JSON_ERROR_NONE) {
