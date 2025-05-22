@@ -10,27 +10,29 @@ use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\Routing\Annotation\Route;
+use Symfony\Component\Security\Core\Authentication\Token\Storage\TokenStorageInterface;
 
 #[Route('/api/vehicules')]
 class VehiculeController extends AbstractController
 {
-
-    #[Route('/user/{id}', name: 'vehicule_user', methods: ['GET'])]
-    public function getAllVehicules(VehiculeRepository $vehiculeRepository, ClientRepository $clientRepository, string $id): JsonResponse
+    public function __construct(private readonly TokenStorageInterface $tokenStorage)
     {
-        // Vérifie que l'ID est bien un nombre
-        if (!ctype_digit($id)) {
-            return $this->json(['error' => 'ID client invalide'], 400);
-        }
+    }
+
+    #[Route('/user/list', name: 'vehicule_user', methods: ['GET'])]
+    public function getAllVehicules(VehiculeRepository $vehiculeRepository, ClientRepository $clientRepository): JsonResponse
+    {
+        $token = $this->tokenStorage->getToken();
+        $user = $token->getUser();
 
         // Vérifie que le client existe
-        $client = $clientRepository->find((int)$id);
+        $client = $user->getClient();
         if (!$client) {
             return $this->json(['error' => 'Client non trouvé'], 404);
         }
 
         // Récupère les véhicules du client
-        $vehicules = $vehiculeRepository->findBy(['client' => (int)$id]);
+        $vehicules = $vehiculeRepository->findBy(['client' => $client->getId()]);
 
         $data = [];
         foreach ($vehicules as $vehicule) {
@@ -86,6 +88,9 @@ class VehiculeController extends AbstractController
     #[Route('/{id}', name: 'vehicule_update', methods: ['PUT', 'PATCH'])]
     public function update(Request $request, Vehicule $vehicule, EntityManagerInterface $em): JsonResponse
     {
+        $token = $this->tokenStorage->getToken();
+        $user = $token->getUser();
+        
         $data = json_decode($request->getContent(), true);
 
         if (isset($data['brand'])) $vehicule->setBrand($data['brand']);

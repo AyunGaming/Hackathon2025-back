@@ -153,10 +153,6 @@ class SecurityController extends AbstractController
     public function logout(Request $request): JsonResponse
     {
         // Invalide la session et supprime toutes les données utilisateur
-        $session = $request->getSession();
-        $session->clear();
-        $session->invalidate();
-
         return $this->json([
             'success' => true,
             'message' => 'Déconnexion réussie, session supprimée.'

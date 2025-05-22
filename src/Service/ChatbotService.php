@@ -2,12 +2,12 @@
 
 namespace App\Service;
 
+use Symfony\Component\Security\Core\Authentication\Token\Storage\TokenStorageInterface;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
 use Symfony\Component\HttpKernel\Exception\HttpException;
 use Symfony\Component\HttpFoundation\Response;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\DependencyInjection\Attribute\Autowire;
-use Symfony\Component\Security\Core\Security;
 
 class ChatbotService
 {
@@ -18,6 +18,7 @@ class ChatbotService
         private readonly JsonProcessorService $jsonProcessor,
         #[Autowire('@monolog.logger.chatbot')]
         private readonly LoggerInterface $logger,
+        private readonly TokenStorageInterface $tokenStorage,
         string $chatbotUrl
     ) {
         $this->chatbotUrl = rtrim($chatbotUrl, '/');
@@ -87,7 +88,9 @@ class ChatbotService
                 ]);
 
                 // Récupérer l'utilisateur connecté
-                $user = $this->security->getUser();
+
+                $token = $this->tokenStorage->getToken();
+                $user = $token->getUser();
                 $this->logger->info('Utilisateur connecté', ['user' => $user, 'email' => $user->getEmail()]);
                 if (!$user) {
                     throw new HttpException(
