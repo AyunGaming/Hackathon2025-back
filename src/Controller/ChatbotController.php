@@ -4,6 +4,7 @@ namespace App\Controller;
 
 use App\Entity\Appointement;
 use App\Entity\User;
+use App\Service\AppointmentReportService;
 use App\Service\ChatbotService;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
@@ -86,7 +87,7 @@ class ChatbotController extends AbstractController
     }
 
     #[Route('/reset', name: 'chatbot_reset', methods: ['POST'])]
-    public function reset(): JsonResponse
+    public function reset(AppointmentReportService $appointmentReportService): JsonResponse
     {
         try {
             // Récupérer le dernier rendez-vous en attente pour l'utilisateur connecté
@@ -112,6 +113,7 @@ class ChatbotController extends AbstractController
                 'user_id' => $this->getUser()->getId()
             ]);
 
+            $appointmentReportService->generateReport($lastAppointment);
             // Réinitialiser le chat
             $this->chatbotService->resetChat();
 

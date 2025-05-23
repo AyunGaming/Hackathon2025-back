@@ -31,7 +31,7 @@ class AppointmentReportService
         $this->addContent($appointment);
         $this->addFooter($appointment);
 
-        return $this->pdf->Output('compte_rendu.pdf', 'S');
+        return $this->pdf->Output(__DIR__.'/../../var/appointments/compte_rendu_'. $appointment->getId() .'.pdf', 'F');
     }
 
     /**
@@ -159,7 +159,7 @@ class AppointmentReportService
         $this->styleManager->setSectionContentStyle();
         $total = 0;
 
-        $services = $appointment->getService();
+        $services = $appointment->getServices();
         if (empty($services)) {
            throw new \RuntimeException('Aucune prestation trouvée pour le rendez-vous');
         } else {

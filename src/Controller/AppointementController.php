@@ -210,7 +210,6 @@ class AppointementController extends AbstractController
         if (!$user) {
             return $this->json(['error' => 'Non authentifié'], 401);
         }
-        $user = $userRepository->find($userId);
 
         $client = $user->getClient();
         if (!$client) {
