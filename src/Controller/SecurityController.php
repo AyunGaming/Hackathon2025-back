@@ -8,10 +8,12 @@ use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\Routing\Annotation\Route;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
+use Lexik\Bundle\JWTAuthenticationBundle\Services\JWTTokenManagerInterface;
 use App\Repository\UserRepository;
 use App\Entity\User;
 use App\Entity\Client;
 use App\Entity\Vehicule;
+
 
 class SecurityController extends AbstractController
 {
@@ -114,40 +116,31 @@ class SecurityController extends AbstractController
     public function login(
         Request $request,
         UserRepository $userRepository,
-        UserPasswordHasherInterface $passwordHasher
+        UserPasswordHasherInterface $passwordHasher,
+        JWTTokenManagerInterface $JWTManager
     ): JsonResponse {
         try {
+            // Récupérer les données envoyées dans la requête (par exemple, email et mot de passe)
             $data = json_decode($request->getContent(), true);
+            
+            $email = $data['email'] ?? '';
+            $password = $data['password'] ?? '';
 
-            if (empty($data['email']) || empty($data['password'])) {
-                return $this->json(['error' => 'Champs obligatoires manquants.'], 400);
+            if (!$email || !$password) {
+                return new JsonResponse(['error' => 'Email and password are required'], 400);
             }
 
-            $user = $userRepository->findOneBy(['email' => $data['email']]);
-            if (!$user) {
-                return $this->json(['error' => 'Identifiants invalides.'], 401);
+            // Trouver l'utilisateur en base de données
+            $user = $userRepository->findOneByEmail($email);
+            if (!$user || !$passwordHasher->isPasswordValid($user, $password)) {
+                return new JsonResponse(['error' => 'Invalid credentials'], 401);
             }
 
-            if (!$passwordHasher->isPasswordValid($user, $data['password'])) {
-                return $this->json(['error' => 'Identifiants invalides.'], 401);
-            }
+            // Générer le JWT
+            $token = $JWTManager->create($user);
 
-            // Stocke les infos utiles en session
-            $session = $request->getSession();
-            $session->set('user_id', $user->getId());
-            $session->set('user_email', $user->getEmail());
-            $session->set('user_roles', $user->getRoles());
-            $session->set('user_client', $user->getClient() ? $user->getClient()->getId() : null);
-
-            return $this->json([
-                'success' => true,
-                'user' => [
-                    'id' => $user->getId(),
-                    'email' => $user->getEmail(),
-                    'roles' => $user->getRoles(),
-                    'client' => $user->getClient() ? $user->getClient()->getId() : null,
-                ]
-            ]);
+            // Retourner le token
+            return new JsonResponse(['token' => $token]);
         } catch (\Throwable $e) {
             return $this->json([
                 'error' => 'Erreur serveur : ' . $e->getMessage()
@@ -160,10 +153,6 @@ class SecurityController extends AbstractController
     public function logout(Request $request): JsonResponse
     {
         // Invalide la session et supprime toutes les données utilisateur
-        $session = $request->getSession();
-        $session->clear();
-        $session->invalidate();
-
         return $this->json([
             'success' => true,
             'message' => 'Déconnexion réussie, session supprimée.'

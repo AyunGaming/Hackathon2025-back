@@ -72,6 +72,11 @@ class Client
         return $this;
     }
 
+    public function getFullName(): string
+    {
+        return $this->first_name . ' ' . $this->last_name;
+    }
+
     public function getLastName(): ?string
     {
         return $this->last_name;

@@ -9,46 +9,59 @@ use App\Repository\VehiculeRepository;
 use App\Repository\DealershipRepository;
 use App\Repository\ServiceRepository;
 use Doctrine\ORM\EntityManagerInterface;
+use Psr\Log\LoggerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
+use Symfony\Component\DependencyInjection\Attribute\Autowire;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\Routing\Annotation\Route;
+use Symfony\Component\Security\Core\Authentication\Token\Storage\TokenStorageInterface;
 
 #[Route('/api/appointements')]
 class AppointementController extends AbstractController
 {
-    #[Route('/user/{id}', name: 'get_all_appointements', methods: ['GET'])]
-    public function getAllAppointements(
-        int $id,
-        Request $request,
-        AppointementRepository $appointementRepository,
-        UserRepository $userRepository
-    ): JsonResponse {
-        if (!$id) {
-            return $this->json(['error' => 'Non authentifié'], 401);
-        }
-        $user = $userRepository->find($id);
-        if (!$user) {
-            return $this->json(['error' => 'Utilisateur introuvable'], 404);
-        }
-        $client = $user->getClient();
-        if (!$client) {
-            return $this->json(['error' => 'Client introuvable pour cet utilisateur'], 404);
-        }
-        $appointements = $appointementRepository->findBy(['client' => $client]);
+    public function __construct(
+        #[Autowire('@monolog.logger.entity')]
+        private readonly LoggerInterface $logger,
+        private readonly TokenStorageInterface $tokenStorage,
+    )
+    {
+    }
 
-        // Transforme les entités en tableaux simples
-        $data = [];
-        foreach ($appointements as $rdv) {
-            $data[] = [
-                'id' => $rdv->getId(),
-                'client' => $rdv->getClient() ? $rdv->getClient()->getLastname() . ' ' . $rdv->getClient()->getFirstName() : null,
-                'vehicule' => $rdv->getVehicule() ? $rdv->getVehicule()->getBrand() . ' ' . $rdv->getVehicule()->getModel() : null,
-                'dealership' => $rdv->getDealership()?->getName(),
-                'date' => $rdv->getDate()?->format('Y-m-d H:i:s'),
-            ];
+    #[Route('/user/list', name: 'get_all_appointements', methods: ['GET'])]
+    public function getAllAppointements(Request $request, AppointementRepository $appointementRepository, UserRepository $userRepository): JsonResponse
+    {
+        $token = $this->tokenStorage->getToken();
+        if(is_null($token)) return $this->json(['error' => 'Pas de token trouvé']);
+
+        $user = $token->getUser();
+        $this->logger->info('Token de connexion depuis le controller de rdv: ', ['user' => $user->getEmail()]);
+
+        $client = $user->getClient();
+
+        try{
+            $appointements = $appointementRepository->findBy(['client' => $client]);
+
+            // Transforme les entités en tableaux simples
+            $data = [];
+            foreach ($appointements as $rdv) {
+                $data[] = [
+                    'id' => $rdv->getId(),
+                    'client' => $rdv->getClient() ? $rdv->getClient()->getLastname() . ' ' . $rdv->getClient()->getFirstName() : null,
+                    'vehicule' => $rdv->getVehicule() ? $rdv->getVehicule()->getBrand() . ' ' . $rdv->getVehicule()->getModel() : null,
+                    'dealership' => $rdv->getDealership()?->getName(),
+                    'date' => $rdv->getDate()?->format('Y-m-d H:i:s'),
+                ];
+            }
+        } catch (\Exception $e)
+        {
+            $this->logger->error('Erreur lors de la récupération des rdv: ',['error' => $e->getMessage()]);
+            return $this->json(['error' => $e->getMessage()], 500);
+        } finally {
+            return $this->json($data);
         }
-        return $this->json($data);
+
+
     }
 
     #[Route('/{id}', name: 'get_appointement', methods: ['GET'])]
@@ -57,12 +70,14 @@ class AppointementController extends AbstractController
         Request $request,
         AppointementRepository $appointementRepository
     ): JsonResponse {
-        $userId = $request->getSession()->get('user_id');
-        if (!$userId) {
+        $token = $this->tokenStorage->getToken();
+        $user = $token->getUser();
+
+        if (!$user) {
             return $this->json(['error' => 'Non authentifié'], 401);
         }
         $appointement = $appointementRepository->find($id);
-        if (!$appointement || $appointement->getUser()->getId() !== $userId) {
+        if (!$appointement || $appointement->getUser()->getId() !== $user->getId()) {
             return $this->json(['error' => 'Appointement introuvable ou non autorisé'], 404);
         }
         return $this->json($appointement);
@@ -77,14 +92,14 @@ class AppointementController extends AbstractController
         DealershipRepository $dealershipRepository,
         ServiceRepository $serviceRepository
     ): JsonResponse {
-        $userId = $request->getSession()->get('user_id');
-        if (!$userId) {
+
+        $token = $this->tokenStorage->getToken();
+        $user = $token->getUser();
+
+        if (!$user) {
             return $this->json(['error' => 'Non authentifié'], 401);
         }
-        $user = $userRepository->find($userId);
-        if (!$user) {
-            return $this->json(['error' => 'Utilisateur introuvable'], 404);
-        }
+
         $client = $user->getClient();
         if (!$client) {
             return $this->json(['error' => 'Client introuvable'], 404);
@@ -157,12 +172,14 @@ class AppointementController extends AbstractController
         AppointementRepository $appointementRepository,
         UserRepository $userRepository
     ): JsonResponse {
-        $userId = $request->getSession()->get('user_id');
-        if (!$userId) {
+
+        $token = $this->tokenStorage->getToken();
+        $user = $token->getUser();
+
+        if (!$user) {
             return $this->json(['error' => 'Non authentifié'], 401);
         }
         $appointement = $appointementRepository->find($id);
-        $user = $userRepository->find($userId);
         if (!$appointement || $appointement->getClient()->getId() !== $user->getClient()->getId()) {
             return $this->json(['error' => 'Appointement introuvable ou non autorisé'], 404);
         }
@@ -186,14 +203,14 @@ class AppointementController extends AbstractController
         Request $request,
         UserRepository $userRepository
     ): JsonResponse {
-        $userId = $request->getSession()->get('user_id');
-        if (!$userId) {
+
+        $token = $this->tokenStorage->getToken();
+        $user = $token->getUser();
+
+        if (!$user) {
             return $this->json(['error' => 'Non authentifié'], 401);
         }
-        $user = $userRepository->find($userId);
-        if (!$user) {
-            return $this->json(['error' => 'Utilisateur introuvable'], 404);
-        }
+
         $client = $user->getClient();
         if (!$client) {
             return $this->json(['error' => 'Client introuvable'], 404);
@@ -202,7 +219,7 @@ class AppointementController extends AbstractController
         if (!$appointement || $appointement->getClient()->getId() !== $client->getId()) {
            return $this->json(['error' => 'Erreur lors de la suppression : '], 500);
         }
-            
+
         $em->remove($appointement);
         $em->flush();
 
