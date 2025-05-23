@@ -10,33 +10,41 @@ use Doctrine\ORM\Mapping as ORM;
 #[ORM\Entity(repositoryClass: AppointementRepository::class)]
 class Appointement
 {
+    public const STATUS_PENDING = 'en attente';
+    public const STATUS_VALIDATED = 'validé';
+
     #[ORM\Id]
     #[ORM\GeneratedValue]
     #[ORM\Column]
     private ?int $id = null;
 
-    #[ORM\ManyToOne(inversedBy: 'appointements')]
-    #[ORM\JoinColumn(nullable: false)]
-    private ?Client $client = null;
+    #[ORM\Column(type: 'datetime')]
+    private ?\DateTimeInterface $date = null;
+
+    #[ORM\Column(length: 20, options: ['default' => self::STATUS_PENDING])]
+    private string $status = self::STATUS_PENDING;
 
     #[ORM\ManyToOne(inversedBy: 'appointements')]
+    #[ORM\JoinColumn(nullable: false)]
+    private ?Dealership $dealership = null;
+
+    #[ORM\ManyToOne(inversedBy: 'appointements')]
+    #[ORM\JoinColumn(nullable: false)]
     private ?Vehicule $vehicule = null;
 
     #[ORM\ManyToOne(inversedBy: 'appointements')]
-    private ?Dealership $dealership = null;
-
-    #[ORM\Column]
-    private ?\DateTime $date = null;
+    #[ORM\JoinColumn(nullable: false)]
+    private ?Client $client = null;
 
     /**
      * @var Collection<int, Service>
      */
     #[ORM\ManyToMany(targetEntity: Service::class, inversedBy: 'appointements')]
-    private Collection $service;
+    private Collection $services;
 
     public function __construct()
     {
-        $this->service = new ArrayCollection();
+        $this->services = new ArrayCollection();
     }
 
     public function getId(): ?int
@@ -44,27 +52,25 @@ class Appointement
         return $this->id;
     }
 
-    public function getClient(): ?Client
+    public function getDate(): ?\DateTimeInterface
     {
-        return $this->client;
+        return $this->date;
     }
 
-    public function setClient(?Client $client): static
+    public function setDate(\DateTimeInterface $date): static
     {
-        $this->client = $client;
-
+        $this->date = $date;
         return $this;
     }
 
-    public function getVehicule(): ?Vehicule
+    public function getStatus(): string
     {
-        return $this->vehicule;
+        return $this->status;
     }
 
-    public function setVehicule(?Vehicule $vehicule): static
+    public function setStatus(string $status): static
     {
-        $this->vehicule = $vehicule;
-
+        $this->status = $status;
         return $this;
     }
 
@@ -76,43 +82,50 @@ class Appointement
     public function setDealership(?Dealership $dealership): static
     {
         $this->dealership = $dealership;
-
         return $this;
     }
 
-    public function getDate(): ?\DateTime
+    public function getVehicule(): ?Vehicule
     {
-        return $this->date;
+        return $this->vehicule;
     }
 
-    public function setDate(\DateTime $date): static
+    public function setVehicule(?Vehicule $vehicule): static
     {
-        $this->date = $date;
+        $this->vehicule = $vehicule;
+        return $this;
+    }
 
+    public function getClient(): ?Client
+    {
+        return $this->client;
+    }
+
+    public function setClient(?Client $client): static
+    {
+        $this->client = $client;
         return $this;
     }
 
     /**
      * @return Collection<int, Service>
      */
-    public function getService(): Collection
+    public function getServices(): Collection
     {
-        return $this->service;
+        return $this->services;
     }
 
     public function addService(Service $service): static
     {
-        if (!$this->service->contains($service)) {
-            $this->service->add($service);
+        if (!$this->services->contains($service)) {
+            $this->services->add($service);
         }
-
         return $this;
     }
 
     public function removeService(Service $service): static
     {
-        $this->service->removeElement($service);
-
+        $this->services->removeElement($service);
         return $this;
     }
 }

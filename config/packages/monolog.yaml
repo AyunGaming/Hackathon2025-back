@@ -1,6 +1,30 @@
 monolog:
     channels:
-        - deprecation # Deprecations are logged in the dedicated "deprecation" channel when it exists
+        - deprecation
+        - chatbot
+        - entity
+
+    handlers:
+        main:
+            type: stream
+            path: "%kernel.logs_dir%/%kernel.environment%.log"
+            level: debug
+            channels: ["!event", "!chatbot", "!entity"]
+            formatter: monolog.formatter.line
+
+        chatbot:
+            type: stream
+            path: "%kernel.logs_dir%/chatbot.log"
+            level: debug
+            channels: ["chatbot"]
+            formatter: monolog.formatter.line
+
+        entity:
+            type: stream
+            path: "%kernel.logs_dir%/entity.log"
+            level: debug
+            channels: ["entity"]
+            formatter: monolog.formatter.line
 
 when@dev:
     monolog:
@@ -9,15 +33,17 @@ when@dev:
                 type: stream
                 path: "%kernel.logs_dir%/%kernel.environment%.log"
                 level: debug
-                channels: ["!event"]
-            # uncomment to get logging in your browser
-            # you may have to allow bigger header sizes in your Web server configuration
-            #firephp:
-            #    type: firephp
-            #    level: info
-            #chromephp:
-            #    type: chromephp
-            #    level: info
+                channels: ["!event", "!chatbot", "!entity"]
+            chatbot:
+                type: stream
+                path: "%kernel.logs_dir%/chatbot.log"
+                level: debug
+                channels: ["chatbot"]
+            entity:
+                type: stream
+                path: "%kernel.logs_dir%/entity.log"
+                level: debug
+                channels: ["entity"]
             console:
                 type: console
                 process_psr_3_messages: false
@@ -31,11 +57,21 @@ when@test:
                 action_level: error
                 handler: nested
                 excluded_http_codes: [404, 405]
-                channels: ["!event"]
+                channels: ["!event", "!chatbot", "!entity"]
             nested:
                 type: stream
                 path: "%kernel.logs_dir%/%kernel.environment%.log"
                 level: debug
+            chatbot:
+                type: stream
+                path: "%kernel.logs_dir%/chatbot.log"
+                level: debug
+                channels: ["chatbot"]
+            entity:
+                type: stream
+                path: "%kernel.logs_dir%/entity.log"
+                level: debug
+                channels: ["entity"]
 
 when@prod:
     monolog:
@@ -51,6 +87,18 @@ when@prod:
                 path: php://stderr
                 level: debug
                 formatter: monolog.formatter.json
+            chatbot:
+                type: stream
+                path: php://stderr
+                level: debug
+                channels: ["chatbot"]
+                formatter: monolog.formatter.json
+            entity:
+                type: stream
+                path: php://stderr
+                level: debug
+                channels: ["entity"]
+                formatter: monolog.formatter.json
             console:
                 type: console
                 process_psr_3_messages: false
@@ -59,4 +107,4 @@ when@prod:
                 type: stream
                 channels: [deprecation]
                 path: php://stderr
-                formatter: monolog.formatter.json
+                formatter: monolog.formatter.json 
