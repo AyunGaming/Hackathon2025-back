@@ -51,14 +51,12 @@ class VehiculeController extends AbstractController
     #[Route('', name: 'vehicule_create', methods: ['POST'])]
     public function create(Request $request, EntityManagerInterface $em, ClientRepository $clientRepository, \App\Repository\UserRepository $userRepository): JsonResponse
     {
-        $userId = $request->getSession()->get('user_id');
-        if (!$userId) {
+        $token = $this->tokenStorage->getToken();
+        $user = $token->getUser();
+        if (!$user) {
             return $this->json(['error' => 'Non authentifié'], 401);
         }
-        $user = $userRepository->find($userId);
-        if (!$user) {
-            return $this->json(['error' => 'Utilisateur introuvable'], 404);
-        }
+
         $client = $user->getClient();
         if (!$client) {
             return $this->json(['error' => 'Client introuvable'], 404);
